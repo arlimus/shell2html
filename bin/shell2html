@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+
+require 'trollop'
+require 'shell2html'
+
+opts = Trollop::options do
+  opt :bg, "Set the background to light or dark", type: :string
+  opt :palette, "color palette for ansi2html (linux|solarized|tango|xterm)", type: :string
+  banner <<-EOS
+Usage: shell2html [outfile] [options]+
+where [options] are:
+EOS
+end
+
+outfile = nil
+if ARGV.length > 0
+  outfile = ARGV[0]
+  puts "saving to: #{outfile}"
+end
+Shell2Html.new(outfile, opts).repl
