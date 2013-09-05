@@ -2,7 +2,6 @@
 
 require 'eventmachine'
 require 'rb-readline'
-require 'thor'
 
 module ExecSimple
 
@@ -42,7 +41,9 @@ module ExecSimple
 end
 
 
-# hotfix broken CTRL+forward/backward in shell (at least on my keyboard layout)
+# hotfix broken CTRL+forward/backward in shell
+# (at least on my keyboard layout, where the default input has bold-style)
+# (ie ansi-escape \e[1m which is not read correctly)
 module Readline
   def self.set_key_to x, y
     RbReadline.rl_bind_keyseq_if_unbound(x,y)
@@ -55,8 +56,9 @@ Readline::set_key_to "\033[1;5D", :rl_backward_word
 class Shell2Html
   include ExecSimple
 
-  def initialize output = nil
+  def initialize output = nil, options
     @output = output
+    @options = options
     @cache = []
     @html = ""
   end
@@ -92,7 +94,10 @@ class Shell2Html
   end
 
   def finish
-    IO.popen('ansi2html','r+') do |pipe|
+    opts_bg = ( @options[:bg].nil? or @options[:bg] != 'dark' ) ? '' : "--bg=dark"
+    opts_palette = ( @options[:palette].nil? ) ? '' : "--palette=#{@options[:palette]}"
+
+    IO.popen("ansi2html #{opts_bg} #{opts_palette}",'r+') do |pipe|
       @cache.each do |cc|
         pipe.puts("> #{cc[0]}")
         pipe.puts(cc[1])
@@ -116,9 +121,20 @@ class Shell2Html
   SEPARATOR = "THIS_IS_A_HUGE_HONKING_SEPARATOR_WHICH_IS_TURNED_INTO_A_HORIZONTAL_RULE"
 end
 
-f = nil
-if ARGV.length > 0
-  f = ARGV[0]
-  puts "saving to: #{f}"
+
+require 'trollop'
+opts = Trollop::options do
+  opt :bg, "Set the background to light or dark", type: :string
+  opt :palette, "color palette for ansi2html (linux|solarized|tango|xterm)", type: :string
+  banner <<-EOS
+Usage: shell2html [outfile] [options]+
+where [options] are:
+EOS
 end
-Shell2Html.new(f).repl
+
+outfile = nil
+if ARGV.length > 0
+  outfile = ARGV[0]
+  puts "saving to: #{outfile}"
+end
+Shell2Html.new(outfile, opts).repl
