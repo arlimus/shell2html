@@ -31,7 +31,6 @@ module ExecSimple
     end
 
     def receive_line(data)
-      p "got data"
       @items.push @itemizer.(data)
     end
 
@@ -52,16 +51,23 @@ class Shell2Html
   end
 
   def repl
+    # http://bogojoker.com/readline/
+    stty_save = `stty -g`.chomp
+    trap('INT') do
+      system('stty', stty_save)
+      finish
+    end
+
     loop do
       line = Readline::readline('> ')
-      break if line.nil? || line == 'quit' || line == 'exit'
+      break if line.nil?
       Readline::HISTORY.push(line)
       run line
     end
   end
 
   def run cmd
-    if cmd == "exit"
+    if cmd == 'exit' or cmd == 'quit'
       finish
     end
 
