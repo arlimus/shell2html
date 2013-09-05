@@ -1,0 +1,5 @@
+0.1: started initial version of shell2html with basic functionality:
+     - repl for entering shell commands
+     - utility to turn all commands into nice html using ansi2html
+     - history + readline to browse around commands
+     - basic configuration options
