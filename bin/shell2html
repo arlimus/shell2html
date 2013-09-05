@@ -41,6 +41,17 @@ module ExecSimple
 
 end
 
+
+# hotfix broken CTRL+forward/backward in shell (at least on my keyboard layout)
+module Readline
+  def self.set_key_to x, y
+    RbReadline.rl_bind_keyseq_if_unbound(x,y)
+  end
+end
+Readline::set_key_to "\033[1;5C", :rl_forward_word
+Readline::set_key_to "\033[1;5D", :rl_backward_word
+
+
 class Shell2Html
   include ExecSimple
 
@@ -57,6 +68,7 @@ class Shell2Html
       system('stty', stty_save)
       finish
     end
+
 
     loop do
       line = Readline::readline('> ')
