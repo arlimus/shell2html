@@ -71,6 +71,7 @@ class Shell2Html
       finish
     end
 
+    add_history_to_readline
 
     loop do
       line = Readline::readline('> ')
@@ -119,6 +120,38 @@ class Shell2Html
   private
 
   SEPARATOR = "THIS_IS_A_HUGE_HONKING_SEPARATOR_WHICH_IS_TURNED_INTO_A_HORIZONTAL_RULE"
+
+  def add_history_to_readline
+    history_files = %w{ ~/.history ~/.zsh_history ~/.bash_history}
+
+    # find the history file that was last modified
+    candidates = history_files.map do |f|
+        File::expand_path f
+      end.find_all do |f|
+        File::file? f
+      end.sort_by do |f|
+        File::stat(f).mtime
+      end
+
+    # add the history
+    if candidates.empty?
+      puts "Can't find any shell history in: #{history_files.join(', ')}"
+    else
+      p candidates.last
+      r = File::read( candidates.last )
+      # work around an edge-case in encoding:
+      # http://stackoverflow.com/questions/10466161/ruby-string-encode-still-gives-invalid-byte-sequence-in-utf-8/10466273#10466273
+      s = r.force_encoding('binary').encode('utf-8', :invalid => :replace, :undef => :replace)
+      ls = s.split("\n")
+      # work around zsh formatting of history:
+      if candidates.last.end_with? "/.zsh_history"
+        # : 1378387078:0;ls
+        ls = ls.map{|l| l.sub /^:\s[0-9]+:[0-9]+;/, ''}
+      end
+      # add each line to the history
+      ls.each{|l| Readline::HISTORY.push(l)}
+    end
+  end
 end
 
 
