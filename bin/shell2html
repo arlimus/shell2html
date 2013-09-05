@@ -1,0 +1,102 @@
+#!/usr/bin/env ruby
+
+require 'eventmachine'
+require 'thor'
+
+module ExecSimple
+
+  def exec_simple( cmd, itemizer = nil )
+
+    cmd_escaped = cmd.gsub(/\\/,'\\\\\\\\').gsub(/["]/,'\"')
+    cmd = "sh -c \"#{cmd_escaped}\""
+
+    res = nil
+    EM::run do
+      res = EM::popen( cmd, ResultCache, itemizer )
+    end
+    res.items
+  end
+
+  private
+
+  class ResultCache < EM::Connection
+    include EM::Protocols::LineText2
+    attr_reader :itemizer, :items
+
+    def initialize(itemizer)
+      @items = []
+      @itemizer = lambda {|i| i }
+      @itemizer = itemizer if itemizer.is_a?(Proc)
+    end
+
+    def receive_line(data)
+      @items.push @itemizer.(data)
+    end
+
+    def unbind
+      EM::stop
+    end
+  end
+
+end
+
+class Shell2Html
+  include ExecSimple
+
+  def initialize output = nil
+    @output = output
+    @cache = []
+    @html = ""
+  end
+
+  def repl
+    while(true) do
+      print "> "
+      run $stdin.gets.chomp
+    end
+  end
+
+  def run cmd
+    if cmd == "exit"
+      finish
+    end
+
+    r = exec_simple cmd, lambda{|i|
+      puts i
+      i
+    }
+
+    @cache.push([cmd, r.join("\n")])
+  end
+
+  def finish
+    IO.popen('ansi2html','r+') do |pipe|
+      @cache.each do |cc|
+        pipe.puts("> #{cc[0]}")
+        pipe.puts(cc[1])
+        pipe.puts(SEPARATOR)
+      end
+      pipe.close_write
+      @html = pipe.read.gsub /#{SEPARATOR}/, "\n<hr/>\n"
+    end
+
+    if @output.nil?
+      puts @html
+    else
+      File::write @output, @html
+    end
+
+    exit 0
+  end
+
+  private
+
+  SEPARATOR = "THIS_IS_A_HUGE_HONKING_SEPARATOR_WHICH_IS_TURNED_INTO_A_HORIZONTAL_RULE"
+end
+
+f = nil
+if ARGV.length > 0
+  f = ARGV[0]
+  puts "saving to: #{f}"
+end
+Shell2Html.new(f).repl
