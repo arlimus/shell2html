@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'eventmachine'
+require 'rb-readline'
 require 'thor'
 
 module ExecSimple
@@ -30,6 +31,7 @@ module ExecSimple
     end
 
     def receive_line(data)
+      p "got data"
       @items.push @itemizer.(data)
     end
 
@@ -50,9 +52,11 @@ class Shell2Html
   end
 
   def repl
-    while(true) do
-      print "> "
-      run $stdin.gets.chomp
+    loop do
+      line = Readline::readline('> ')
+      break if line.nil? || line == 'quit' || line == 'exit'
+      Readline::HISTORY.push(line)
+      run line
     end
   end
 
