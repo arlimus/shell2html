@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'trollop'
+require 'shell2html'
 
 opts = Trollop::options do
   opt :bg, "Set the background to light or dark", type: :string
